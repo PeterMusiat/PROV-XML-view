@@ -4,7 +4,7 @@
 
 PROV-XML-View is a visualisation tool to create provenance graphs from PROV-XML notation in accordance with PROV Graph Layout Conventions. It allows users to visually verify their PROV-XML code. The tool runs in any javascript-enabled web-browser.
 
-This project was initiated by Troy Kohwalter and professors Leonardo Murta and Esteban Clua during Troy's master course at Universidade Federal Fluminense. 
+This tool was developed as part of the "From apps to labs" Flinders University High Value Data Colelction project supported by the [Australian National Data Service](http://www.ands.org.au/) 
 
 ![Prov Viewer](https://cloud.githubusercontent.com/assets/26448105/23979732/41a245fc-0a4b-11e7-9700-2b720fef324b.png)
 
