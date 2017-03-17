@@ -1,0 +1,570 @@
+<!doctype html>
+<html>
+<head>
+  <title>PROV Visualisation test</title>
+
+  <script type="text/javascript" src="./visjs/vis.js"></script>
+  <link href="./visjs/vis.css" rel="stylesheet" type="text/css" />
+
+  <style type="text/css">
+    #mynetwork {
+      width: 800px;
+      height: 800px;
+      border: 2px solid lightgray;
+    }
+
+	textarea  
+	{  
+	   font-family:"Courier New", Courier, monospace;  
+	   font-size: 12px;   
+	}
+	
+    p {
+      max-width:700px;
+    }
+	
+	h1 {
+		font-size: 36px;
+		line-height: 44px;
+		font-weight: lighter;
+		font-family: Lucida Grande,Lucida Sans Unicode,Lucida Sans,Geneva,Verdana,sans-serif;
+	}
+	
+	.button {
+	    background-color: #008CBA;
+	    border: none;
+	    color: white;
+	    padding: 15px 60px;
+	    text-align: center;
+	    text-decoration: none;
+	    display: inline-block;
+	    font-size: 20px;
+	}
+  </style>
+</head>
+<body>
+
+<div style="width: 100%; display: table;">
+    <div style="display: table-row">
+        <div style="width: 600px; display: table-cell;"><h1>PROV-XML Visualiser</h1></div>
+        <div style="display: table-cell;" align="right">
+		 <img src="http://www.ands.org.au/__data/assets/image/0003/384591/ands-logo.jpg" alt="ANDS logo" height="50px" hspace="20"> 
+		 <img src="http://www.flinders.edu.au/flinders/app_templates/flinderstemplates/images/Flinders-50th-logo.png" alt="Flinders logo" height="45px"> 
+	 </div>
+    </div>
+</div>
+
+
+
+<div align="center">
+
+<textarea style="width: 97%; height: 150px; border: 2px solid lightgray;" id="pxml">
+Enter PROV XML code here
+</textarea> 
+
+<br />
+
+<p>Truncate long information strings: <input type="checkbox" id="truncate"></p>
+
+<p>Click the button below to draw the diagram.</p>
+
+<button class="button" onclick="parseXML()">Visualise</button>
+
+<p>
+</div>
+
+<div style="width: 100%; display: table;">
+    <div style="display: table-row">
+        <div style="width: 800px; display: table-cell;"><div id="mynetwork"></div> </div>
+        <div id="config" style="display: table-cell;"> </div>
+    </div>
+</div>
+
+<hr>
+
+<div align="center">
+<p style="font-size:11px">Copyright Peter Musiat, Flinders University, 2016</p>
+</div>	
+
+
+
+
+
+
+<script type="text/javascript">
+function parseXML() {
+	// load xml text from field
+	var xmlStr = document.getElementById("pxml").value;
+
+	// parse XML to XMLdoc object
+	var xmlDoc = null;
+	if (window.DOMParser) {
+		var parser = new DOMParser();
+		xmlDoc = parser.parseFromString(xmlStr, "text/xml");
+	} else if (window.ActiveXObject) {
+		xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+		xmlDoc.async = false;
+		xmlDoc.loadXML(xmlStr);
+	}
+	var provNameSpace = "http://www.w3.org/ns/prov#"
+
+	// create an empty vis dataset for nodes and edges
+	var visNodes = new vis.DataSet();
+	var visEdges = new vis.DataSet();
+
+
+
+	///  ---------------------- ENTITIES -----------------
+
+	// retrieve all entities from XMLdoc and create entities in vis
+	var entityNodes = xmlDoc.getElementsByTagNameNS(provNameSpace, "entity");
+	var entityCount = entityNodes.length;
+
+	// iterate through entities now and add to vis dataset
+	// NOTE: only the ones with id tag are used, as any other elements are references
+	for (i = 0; i < entityCount; i++) {
+		// do something for each node
+		var entityName = entityNodes[i].getAttributeNS(provNameSpace, "id");
+		if (entityName) {
+			visNodes.add({
+				id: entityName,
+				label: entityName,
+				color: {
+					background: '#FFFC87',
+					border: '#808080'
+				},
+				font: {
+					size: 14
+				}
+			});
+			
+			// check if entity node has any child nodes (i.e. additional information about the entity)
+			var allChildren = entityNodes[i].childNodes;
+			if (allChildren.length > 0) {
+				var infoNodeID = entityName + "_info";
+				var infoText = "";
+				for (a = 0; a < allChildren.length; a++) {
+					if (allChildren[a].childNodes.length > 0) {
+						if (infoText != "") {
+							infoText += "\n";
+						}
+						var newLine = allChildren[a].nodeName + " = " + allChildren[a].childNodes[0].nodeValue;
+						infoText += stringDivider(newLine,45,"\n");
+					}
+				}
+				
+				// create node for information box
+				visNodes.add({
+					id: infoNodeID,
+					label: infoText,
+					color: {
+						background: '#FFFFFF',
+						border: '#000000'
+					},
+					shape: 'box',
+					font: {
+						size: 10
+					},
+					shapeProperties: {
+						borderRadius: 0
+					}
+				});
+			
+				// connect info box with entity
+				visEdges.add({
+					from: entityName,
+					to: infoNodeID,
+					color: '#000000',
+					dashes: true,
+					length: 100});
+				}	
+			
+		}
+	}
+
+
+	///  ---------------------- ACTIVITIES -----------------
+
+	// retrieve all activities from XMLdoc and create  in vis
+	var activityNodes = xmlDoc.getElementsByTagNameNS(provNameSpace, "activity");
+	var activityCount = activityNodes.length;
+
+	// iterate through entities now and add to vis dataset
+	// NOTE: only the ones with id tag are used, as any other elements are references
+	for (i = 0; i < activityCount; i++) {
+		// do something for each node
+		var activityName = activityNodes[i].getAttributeNS(provNameSpace, "id");
+		if (activityName) {
+			visNodes.add({
+				id: activityName,
+				label: activityName,
+				color: {
+					background: '#9FB1FC',
+					border: '#0000FF'
+				},
+				shape: 'box',
+				font: {
+					size: 14
+				},
+				shapeProperties: {
+					borderRadius: 0
+				}
+			});
+			
+			// check if activity node has any child nodes (i.e. additional information about the activity)
+			var allChildren = activityNodes[i].childNodes;
+			if (allChildren.length > 0) {
+				var infoNodeID = activityName + "_info";
+				var infoText = "";
+				for (a = 0; a < allChildren.length; a++) {
+					if (allChildren[a].childNodes.length > 0) {
+						if (infoText != "") {
+							infoText += "\n";
+						}
+						var newLine = allChildren[a].nodeName + " = " + allChildren[a].childNodes[0].nodeValue;
+						infoText += stringDivider(newLine,45,"\n");
+						}
+				}
+
+				
+				// create node for information box
+				visNodes.add({
+					id: infoNodeID,
+					label: infoText,
+					color: {
+						background: '#FFFFFF',
+						border: '#000000'
+					},
+					shape: 'box',
+					font: {
+						size: 10
+					},
+					shapeProperties: {
+						borderRadius: 0
+					}
+				});
+			
+				// connect info box with activity
+				visEdges.add({
+					from: activityName,
+					to: infoNodeID,
+					color: '#000000',
+					dashes: true,
+					length: 100});
+				}	
+			
+			
+		}
+	}
+
+
+	///  ---------------------- AGENTS -----------------
+
+	// retrieve all agents from XMLdoc and create  in vis
+	var agentNodes = xmlDoc.getElementsByTagNameNS(provNameSpace, "agent");
+	var agentCount = agentNodes.length;
+
+	// iterate through agents now and add to vis dataset
+	// NOTE: only the ones with id tag are used, as any other elements are references
+	for (i = 0; i < agentCount; i++) {
+		// do something for each node
+		var agentName = agentNodes[i].getAttributeNS(provNameSpace, "id");
+		if (agentName) {
+			// create node for agent itself
+			visNodes.add({
+				id: agentName,
+				label: agentName,
+				color: {
+					background: '#FDB266',
+					border: '#000000'
+				},
+				shape: 'triangle',
+				font: {
+					size: 14
+				}
+			});
+
+			// check if agent node has any child nodes (i.e. additional information about the agent)
+			var allChildren = agentNodes[i].childNodes;
+			if (allChildren.length > 0) {
+				var infoNodeID = agentName + "_info";
+				var infoText = "";
+				for (a = 0; a < allChildren.length; a++) {
+					if (allChildren[a].childNodes.length > 0) {
+						if (infoText != "") {
+							infoText += "\n";
+						}
+						var newLine = allChildren[a].nodeName + " = " + allChildren[a].childNodes[0].nodeValue;
+						infoText += stringDivider(newLine,45,"\n");
+						}
+				}
+				
+				// create node for information box
+				visNodes.add({
+					id: infoNodeID,
+					label: infoText,
+					color: {
+						background: '#FFFFFF',
+						border: '#000000'
+					},
+					shape: 'box',
+					font: {
+						size: 10
+					},
+					shapeProperties: {
+						borderRadius: 0
+					}
+				});
+			
+				// connect info box with agent
+				visEdges.add({
+					from: agentName,
+					to: infoNodeID,
+					color: '#000000',
+					dashes: true,
+					length: 100});
+				} 
+			}
+
+			
+		}
+
+
+	
+
+	///  ---------------------- USED BY relations -----------------
+
+	// retrieve all used by relationships from XMLdoc and create  in vis
+	var usedByNodes = xmlDoc.getElementsByTagNameNS(provNameSpace, "used");
+	var usedByCount = usedByNodes.length;
+
+	// iterate through relationships now and add to vis dataset
+	for (i = 0; i < usedByCount; i++) {
+		// get activity reference which was used, there should be only 1
+		var usedActivity = usedByNodes[i].getElementsByTagNameNS(provNameSpace, "activity")[0];
+		var usedActivityName = usedActivity.getAttributeNS(provNameSpace, "ref");
+
+		// get entity reference which used, there should be only 1
+		var usedEntity = usedByNodes[i].getElementsByTagNameNS(provNameSpace, "entity")[0];
+		var usedEntityName = usedEntity.getAttributeNS(provNameSpace, "ref");
+		if ((usedActivityName) && (usedEntityName)) {
+			visEdges.add({
+				from: usedActivityName,
+				to: usedEntityName,
+				arrows: {
+					to: {
+						scaleFactor: 0.5
+					}
+				},
+				color: '#000000',
+				label: 'used',
+				font: {
+					align: 'horizontal'
+				}
+			});
+		}
+	}
+
+
+	///  ---------------------- WAS GENERATED BY relations -----------------
+
+	// retrieve all generated by relationships from XMLdoc and create  in vis
+	var generatedByNodes = xmlDoc.getElementsByTagNameNS(provNameSpace, "wasGeneratedBy");
+	var generatedByCount = generatedByNodes.length;
+
+	// iterate through relationships now and add to vis dataset
+	for (i = 0; i < generatedByCount; i++) {
+		// get activity reference which was used, there should be only 1
+		var generatedActivity = generatedByNodes[i].getElementsByTagNameNS(provNameSpace, "activity")[0];
+		var generatedActivityName = generatedActivity.getAttributeNS(provNameSpace, "ref");
+
+		// get entity reference which used, there should be only 1
+		var generatedEntity = generatedByNodes[i].getElementsByTagNameNS(provNameSpace, "entity")[0];
+		var generatedEntityName = generatedEntity.getAttributeNS(provNameSpace, "ref");
+		if ((generatedActivityName) && (generatedEntityName)) {
+			visEdges.add({
+				from: generatedEntityName,
+				to: generatedActivityName,
+				arrows: {
+					to: {
+						scaleFactor: 0.5
+					}
+				},
+				color: '#000000',
+				label: 'wasGeneratedBy',
+				font: {
+					align: 'horizontal'
+				}
+			});
+		}
+
+	}
+
+
+
+	///  ---------------------- WAS ASSOCIATED WITH relations -----------------
+
+	// retrieve all generated by relationships from XMLdoc and create  in vis
+	var associatedWithNodes = xmlDoc.getElementsByTagNameNS(provNameSpace, "wasAssociatedWith");
+	var associatedWithCount = associatedWithNodes.length;
+
+	// iterate through relationships now and add to vis dataset
+	for (i = 0; i < associatedWithCount; i++) {
+		// get activity reference which was used, there should be only 1
+		var associatedActivity = associatedWithNodes[i].getElementsByTagNameNS(provNameSpace, "activity")[0];
+		var associatedActivityName = associatedActivity.getAttributeNS(provNameSpace, "ref");
+
+		// get entity reference which used, there should be only 1
+		var associatedAgent = associatedWithNodes[i].getElementsByTagNameNS(provNameSpace, "agent")[0];
+		var associatedAgentName = associatedAgent.getAttributeNS(provNameSpace, "ref");
+		if ((associatedActivityName) && (associatedAgentName)) {
+			visEdges.add({
+				from: associatedActivityName,
+				to: associatedAgentName,
+				arrows: {
+					to: {
+						scaleFactor: 0.5
+					}
+				},
+				color: '#000000',
+				label: 'wasAssociatedWith',
+				font: {
+					align: 'horizontal'
+				}
+			});
+		}
+
+	}
+
+
+
+	///  ---------------------- ACTED ON BEHALF relations -----------------
+
+	// retrieve all generated by relationships from XMLdoc and create  in vis
+	var actedOnNodes = xmlDoc.getElementsByTagNameNS(provNameSpace, "actedOnBehalfOf");
+	var actedOnCount = actedOnNodes.length;
+
+	// iterate through relationships now and add to vis dataset
+	for (i = 0; i < actedOnCount; i++) {
+		// get delegate reference which was used, there should be only 1
+		var delegate = actedOnNodes[i].getElementsByTagNameNS(provNameSpace, "delegate")[0];
+		var delegateName = delegate.getAttributeNS(provNameSpace, "ref");
+
+		// get entity reference which used, there should be only 1
+		var responsible = actedOnNodes[i].getElementsByTagNameNS(provNameSpace, "responsible")[0];
+		var responsibleName = responsible.getAttributeNS(provNameSpace, "ref");
+		if ((delegateName) && (responsibleName)) {
+			visEdges.add({
+				from: delegateName,
+				to: responsibleName,
+				arrows: {
+					to: {
+						scaleFactor: 0.5
+					}
+				},
+				color: '#000000',
+				label: 'actedOnBehalfOf',
+				font: {
+					align: 'horizontal'
+				}
+			});
+		}
+
+	}
+
+
+
+	///  ---------------------- WAS ATTRIBUTED TO relations -----------------
+
+	// retrieve all generated by relationships from XMLdoc and create  in vis
+	var attributedNodes = xmlDoc.getElementsByTagNameNS(provNameSpace, "wasAttributedTo");
+	var attributedCount = attributedNodes.length;
+
+	// iterate through relationships now and add to vis dataset
+	for (i = 0; i < attributedCount; i++) {
+		// get agent reference which was used, there should be only 1
+		var attributedAgent = attributedNodes[i].getElementsByTagNameNS(provNameSpace, "agent")[0];
+		var attributedAgentName = attributedAgent.getAttributeNS(provNameSpace, "ref");
+
+		// get entity reference which used, there should be only 1
+		var attributedEntity = attributedNodes[i].getElementsByTagNameNS(provNameSpace, "entity")[0];
+		var attributedEntityName = attributedEntity.getAttributeNS(provNameSpace, "ref");
+		if ((attributedAgentName) && (attributedEntityName)) {
+			visEdges.add({
+				from: attributedEntityName,
+				to: attributedAgentName,
+				arrows: {
+					to: {
+						scaleFactor: 0.5
+					}
+				},
+				color: '#000000',
+				label: 'wasAttributedTo',
+				font: {
+					align: 'horizontal'
+				}
+			});
+		}
+
+	}
+
+
+	// clear config div caontainer
+	document.getElementById('config').innerHTML = "";
+
+	// create a network
+	var container = document.getElementById('mynetwork');
+	var data = {
+		nodes: visNodes,
+		edges: visEdges
+	};
+	
+    var options = {
+      physics: {
+        stabilization: false
+      },
+      configure: {
+        filter:function (option, path) {
+          if (path.indexOf('physics') !== -1) {
+            return true;
+          }
+          if (path.indexOf('smooth') !== -1 || option === 'smooth') {
+            return true;
+          }
+          return false;
+        },
+        container: document.getElementById('config')
+      }
+    };
+    
+    var network = new vis.Network(container, data, options);
+
+}
+
+// --------------------- HELPER FUNCTIONS ------------------
+
+function stringDivider(str, width, spaceReplacer) {
+// check if strings are to be truncated or word wrapped
+	if (document.getElementById("truncate").checked == true) 
+	{
+		return str.substring(0,width-10) + "...";	
+	} else {
+	    if (str.length>width) {
+	        var p=width
+	        for (;p>0 && str[p]!=' ';p--) {
+	        }
+	        if (p>0) {
+	            var left = str.substring(0, p);
+	            var right = str.substring(p+1);
+	            return left + spaceReplacer + stringDivider(right, width, spaceReplacer);
+	        }
+	    }
+	    return str;
+	}
+		
+}
+
+</script>
+
+</body>
+</html>
